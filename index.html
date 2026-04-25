@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#050C18">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CFO Dashboard">
+  <link rel="manifest" href="manifest.json">
+  <title>CFO Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;overflow:hidden;background:#050C18}
+    body{color:#F5EDE0;font-family:'DM Sans',sans-serif;overscroll-behavior:none}
+    #root{height:100vh;height:100dvh;display:flex;flex-direction:column;max-width:480px;margin:0 auto}
+    .screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:72px;-webkit-overflow-scrolling:touch}
+    .screen::-webkit-scrollbar{display:none}
+    .bottom-nav{height:68px;background:#080F1E;border-top:1px solid #1A2E4A;display:flex;align-items:stretch;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
+    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;border:none;background:transparent;color:#3A5A7A;padding-bottom:4px;transition:color 0.15s}
+    .nav-item.active{color:#C9A96E}
+    .nav-item svg{width:20px;height:20px;flex-shrink:0}
+    .nav-label{font-size:10px;letter-spacing:0.3px;font-family:'DM Sans',sans-serif}
+    .card{background:#0D1726;border:1px solid #1A2E4A;border-radius:12px;padding:16px}
+    .metric-card{background:#0A1520;border-radius:10px;padding:14px;border-left:3px solid transparent}
+    .metric-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#5A7A9A;margin-bottom:6px}
+    .metric-value{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;line-height:1}
+    .metric-sub{font-size:11px;color:#5A7A9A;margin-top:4px}
+    .btn-gold{background:#C9A96E;color:#050C18;border:none;border-radius:8px;padding:13px 20px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;width:100%;transition:opacity 0.15s}
+    .btn-gold:active{opacity:0.8}
+    .btn-gold:disabled{opacity:0.5;cursor:not-allowed}
+    .btn-ghost{background:transparent;color:#C9A96E;border:1px solid #C9A96E33;border-radius:8px;padding:9px 16px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all 0.15s}
+    .btn-ghost:active{background:#C9A96E15}
+    .input-field{background:#060E1C;border:1px solid #1A2E4A;border-radius:8px;padding:11px 14px;color:#F5EDE0;font-family:'IBM Plex Mono',monospace;font-size:15px;width:100%;outline:none;transition:border-color 0.15s;-webkit-appearance:none}
+    .input-field:focus{border-color:#C9A96E55}
+    .input-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#5A7A9A;margin-bottom:5px}
+    .pin-dot{width:12px;height:12px;border-radius:50%;border:2px solid #2A4A6A;transition:all 0.15s}
+    .pin-dot.filled{background:#C9A96E;border-color:#C9A96E}
+    .pin-dot.error{background:#C0392B;border-color:#C0392B}
+    .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 24px}
+    .key{background:#0D1726;border:1px solid #1A2E4A;border-radius:12px;height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.1s;color:#F5EDE0;user-select:none}
+    .key:active{background:#162030;transform:scale(0.95)}
+    .key-num{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500}
+    .key-sub{font-size:9px;letter-spacing:1.5px;color:#5A7A9A;margin-top:1px}
+    .key.empty{background:transparent;border-color:transparent;pointer-events:none}
+    .progress-bg{background:#1A2E4A;border-radius:99px;height:6px;overflow:hidden}
+    .progress-fill{height:100%;border-radius:99px;background:#C9A96E;transition:width 0.4s ease}
+    input[type="range"]{width:100%;height:4px;background:#1A2E4A;border-radius:99px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer}
+    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;background:#C9A96E;border-radius:50%;cursor:pointer}
+    input[type="range"]::-moz-range-thumb{width:20px;height:20px;background:#C9A96E;border-radius:50%;cursor:pointer;border:none}
+    select{background:#060E1C;border:1px solid #1A2E4A;border-radius:8px;padding:10px 14px;color:#F5EDE0;font-family:'DM Sans',sans-serif;font-size:14px;width:100%;outline:none;-webkit-appearance:none;appearance:none}
+    textarea{background:#060E1C;border:1px solid #1A2E4A;border-radius:8px;padding:11px 14px;color:#F5EDE0;font-family:'DM Sans',sans-serif;font-size:14px;width:100%;outline:none;resize:none;min-height:76px;transition:border-color 0.15s;line-height:1.5}
+    textarea:focus{border-color:#C9A96E55}
+    .screen-header{padding:20px 20px 0;display:flex;align-items:flex-start;justify-content:space-between}
+    .screen-title{font-family:'Cormorant Garant',serif;font-size:28px;font-weight:600;color:#F5EDE0;line-height:1}
+    .screen-sub{font-size:12px;color:#5A7A9A;margin-top:3px}
+    .divider{height:1px;background:#1A2E4A;margin:14px 0}
+    .gold{color:#C9A96E}
+    .muted{color:#5A7A9A}
+    .mono{font-family:'IBM Plex Mono',monospace}
+    .serif{font-family:'Cormorant Garant',serif}
+    .loading-screen{display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:14px}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+/* ================================================================
+   CONFIG — Replace these with your Supabase project values
+   ================================================================ */
+const SUPABASE_URL = 'https://rafhvasoapajhdyedmae.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhZmh2YXNvYXBhamhkeWVkbWFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjM0MTYsImV4cCI6MjA5MjYzOTQxNn0.58c-G2WJwAbgUZ-tRaSlc5dCb-R86o_hqF0Jpsd_L80';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ================================================================
+   HELPERS
+   ================================================================ */
+const php = (n) => `₱${Number(n||0).toLocaleString('en-PH',{maximumFractionDigits:0})}`;
+const pct = (n) => `${Number(n||0).toFixed(1)}%`;
+const currMonth = () => new Date().toISOString().slice(0,7);
+const fmtMonth = (m) => { if(!m) return ''; const [y,mo]=m.split('-'); return new Date(y,mo-1).toLocaleString('en-PH',{month:'long',year:'numeric'}); };
+const daysUntil = (d) => Math.ceil((new Date(d)-new Date())/(1000*60*60*24));
+const today = () => new Date().toISOString().slice(0,10);
+const d90 = () => new Date(Date.now()+90*86400000).toISOString().slice(0,10);
+
+async function hashPIN(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+const sc = (v, thresholds) => v >= thresholds[0] ? '#3D9970' : v >= thresholds[1] ? '#C9A96E' : '#E05252';
+
+/* ================================================================
+   PIN GATE
+   ================================================================ */
+function PINGate({ onUnlock, isSetup }) {
+  const [pin, setPin] = React.useState('');
+  const [confirm, setConfirm] = React.useState('');
+  const [step, setStep] = React.useState(isSetup ? 'set' : 'enter');
+  const [error, setError] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+
+  const keys = [
+    ['1',''],['2','ABC'],['3','DEF'],
+    ['4','GHI'],['5','JKL'],['6','MNO'],
+    ['7','PQRS'],['8','TUV'],['9','WXYZ'],
+    null,['0',''],'del'
+  ];
+
+  const handleKey = async (k) => {
+    if (busy) return;
+    if (k === 'del') { step === 'confirm' ? setConfirm(p=>p.slice(0,-1)) : setPin(p=>p.slice(0,-1)); return; }
+    const cur = step === 'confirm' ? confirm : pin;
+    if (cur.length >= 6) return;
+    const next = cur + k;
+    if (step === 'confirm') {
+      setConfirm(next);
+      if (next.length === 6) {
+        if (next !== pin) { setError(true); setTimeout(()=>{ setConfirm(''); setError(false); },800); }
+        else { setBusy(true); await onUnlock(next,'setup'); setBusy(false); }
+      }
+    } else if (step === 'set') {
+      setPin(next);
+      if (next.length === 6) setTimeout(()=>setStep('confirm'),300);
+    } else {
+      setPin(next);
+      if (next.length === 6) {
+        setBusy(true);
+        const ok = await onUnlock(next,'verify');
+        if (!ok) { setError(true); setTimeout(()=>{ setPin(''); setError(false); setBusy(false); },800); }
+      }
+    }
+  };
+
+  const disp = step === 'confirm' ? confirm : pin;
+  const heading = step === 'set' ? 'Set your PIN' : step === 'confirm' ? 'Confirm PIN' : 'Enter PIN';
+  const sub = step === 'set' ? 'Choose a 6-digit access code' : step === 'confirm' ? 'Re-enter to confirm' : 'Personal Finance System';
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100vh',gap:36,padding:'0 0 20px'}}>
+      <div style={{textAlign:'center'}}>
+        <div style={{fontFamily:'Cormorant Garant,serif',fontSize:11,letterSpacing:3,color:'#C9A96E',textTransform:'uppercase',marginBottom:6}}>Ron's</div>
+        <div style={{fontFamily:'Cormorant Garant,serif',fontSize:34,color:'#F5EDE0',fontWeight:600,lineHeight:1}}>CFO Dashboard</div>
+        <div style={{fontSize:12,color:'#5A7A9A',marginTop:10}}>{sub}</div>
+      </div>
+      <div>
+        <div style={{textAlign:'center',fontSize:11,color:'#5A7A9A',marginBottom:16,letterSpacing:0.5}}>{heading}</div>
+        <div style={{display:'flex',gap:12,justifyContent:'center'}}>
+          {[0,1,2,3,4,5].map(i=>(
+            <div key={i} className={`pin-dot ${disp.length>i?(error?'error':'filled'):''}`}/>
+          ))}
+        </div>
+      </div>
+      <div className="keypad">
+        {keys.map((k,i)=>{
+          if(k===null) return <div key={i} className="key empty"/>;
+          if(k==='del') return <div key={i} className="key" onClick={()=>handleKey('del')}><span style={{fontSize:18}}>⌫</span></div>;
+          return (
+            <div key={i} className="key" onClick={()=>handleKey(k[0])}>
+              <span className="key-num">{k[0]}</span>
+              {k[1]&&<span className="key-sub">{k[1]}</span>}
+            </div>
+          );
+        })}
+      </div>
+      {busy && <div style={{fontSize:12,color:'#5A7A9A'}}>Verifying...</div>}
+    </div>
+  );
+}
+
+/* ================================================================
+   SNAPSHOT SCREEN
+   ================================================================ */
+function Snapshot({ data, onUpdate }) {
+  const [editing, setEditing] = React.useState(false);
+  const [form, setForm] = React.useState({ income:21000, expenses:0, liquid_reserves:80000, total_assets:80000, total_liabilities:0, notes:'' });
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(()=>{ if(data) setForm({ income:data.income||21000, expenses:data.expenses||0, liquid_reserves:data.liquid_reserves||80000, total_assets:data.total_assets||80000, total_liabilities:data.total_liabilities||0, notes:data.notes||'' }); },[data]);
+
+  const f = form;
+  const savings = f.income - f.expenses;
+  const savRate = f.income > 0 ? (savings/f.income)*100 : 0;
+  const runway = f.expenses > 0 ? f.liquid_reserves/f.expenses : 0;
+  const nw = f.total_assets - f.total_liabilities;
+  const dti = (f.income*12) > 0 ? (f.total_liabilities/(f.income*12))*100 : 0;
+  const hs = Math.min(100,Math.round(
+    (savRate>=20?25:(savRate/20)*25)+
+    (runway>=6?25:(runway/6)*25)+
+    (dti<=30?20:Math.max(0,20-((dti-30)/30)*20))+
+    (savings>0?15:0)+(nw>0?15:0)
+  ));
+  const hc = hs>=75?'#3D9970':hs>=50?'#C9A96E':'#E05252';
+  const hl = hs>=75?'Strong':hs>=50?'Building':'Caution';
+
+  const handleSave = async () => { setSaving(true); await onUpdate(form); setSaving(false); setEditing(false); };
+  const fld = (key, label) => (
+    <div style={{marginBottom:12}}>
+      <div className="input-label">{label}</div>
+      <div style={{position:'relative',display:'flex',alignItems:'center'}}>
+        <span style={{position:'absolute',left:12,color:'#5A7A9A',fontFamily:'IBM Plex Mono',fontSize:14}}>₱</span>
+        <input className="input-field" style={{paddingLeft:26}} type="number" value={form[key]} onChange={e=>setForm(f=>({...f,[key]:parseFloat(e.target.value)||0}))}/>
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="screen-header">
+        <div>
+          <div className="screen-title">Snapshot</div>
+          <div className="screen-sub">{fmtMonth(currMonth())}</div>
+        </div>
+        <button className="btn-ghost" onClick={()=>setEditing(e=>!e)}>{editing?'Cancel':'Update'}</button>
+      </div>
+
+      {editing ? (
+        <div style={{padding:'16px 20px 0'}}>
+          <div className="card">
+            {fld('income','Monthly Income')}
+            {fld('expenses','Monthly Expenses')}
+            {fld('liquid_reserves','Liquid Reserves (30-day cash)')}
+            {fld('total_assets','Total Assets')}
+            {fld('total_liabilities','Total Liabilities / Debt')}
+            <div style={{marginBottom:14}}>
+              <div className="input-label">Notes</div>
+              <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Context for this month..."/>
+            </div>
+            <button className="btn-gold" onClick={handleSave} disabled={saving}>{saving?'Saving...':'Save Snapshot'}</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{padding:'14px 20px 0'}}>
+          <div className="card" style={{marginBottom:12,textAlign:'center',borderColor:hc+'44'}}>
+            <div style={{fontSize:10,letterSpacing:2,textTransform:'uppercase',color:'#5A7A9A',marginBottom:6}}>Financial Health Score</div>
+            <div style={{fontFamily:'Cormorant Garant,serif',fontSize:60,fontWeight:700,color:hc,lineHeight:1}}>{hs}</div>
+            <div style={{fontSize:13,color:hc,marginTop:4}}>{hl}</div>
+            <div style={{marginTop:12}}>
+              <div className="progress-bg"><div className="progress-fill" style={{width:`${hs}%`,background:hc}}/></div>
+            </div>
+          </div>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+            <div className="metric-card" style={{borderLeftColor:sc(savRate,[20,10])}}>
+              <div className="metric-label">Savings Rate</div>
+              <div className="metric-value" style={{color:sc(savRate,[20,10]),fontSize:20}}>{pct(savRate)}</div>
+              <div className="metric-sub">Target: 20%+</div>
+            </div>
+            <div className="metric-card" style={{borderLeftColor:sc(runway,[6,3])}}>
+              <div className="metric-label">Runway</div>
+              <div className="metric-value" style={{color:sc(runway,[6,3]),fontSize:20}}>{f.expenses>0?runway.toFixed(1):'—'}<span style={{fontSize:12}}> mo</span></div>
+              <div className="metric-sub">Target: 6+ months</div>
+            </div>
+          </div>
+
+          <div className="metric-card" style={{borderLeftColor:savings>=0?'#3D9970':'#E05252',marginBottom:10}}>
+            <div className="metric-label">Monthly Surplus</div>
+            <div className="metric-value" style={{color:savings>=0?'#3D9970':'#E05252'}}>{savings>=0?'+':''}{php(savings)}</div>
+            <div className="metric-sub">{php(f.income)} in &nbsp;·&nbsp; {php(f.expenses)} out</div>
+          </div>
+
+          <div className="metric-card" style={{borderLeftColor:'#C9A96E',marginBottom:10}}>
+            <div className="metric-label">Net Worth</div>
+            <div className="metric-value" style={{color:'#C9A96E'}}>{php(nw)}</div>
+            <div className="metric-sub">Assets {php(f.total_assets)} &nbsp;·&nbsp; Debt {php(f.total_liabilities)}</div>
+          </div>
+
+          <div className="metric-card" style={{borderLeftColor:'#4A6A8A',marginBottom:10}}>
+            <div className="metric-label">Liquid Reserves</div>
+            <div className="metric-value" style={{color:'#7AB8E0'}}>{php(f.liquid_reserves)}</div>
+            <div className="metric-sub">Accessible within 30 days</div>
+          </div>
+
+          {f.notes && (
+            <div className="card" style={{marginBottom:10}}>
+              <div style={{fontSize:10,letterSpacing:1.5,textTransform:'uppercase',color:'#5A7A9A',marginBottom:6}}>Notes</div>
+              <div style={{fontSize:13,color:'#8A9AB5',lineHeight:1.6}}>{f.notes}</div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================
+   TARGETS SCREEN
+   ================================================================ */
+function Targets({ targets, onAdd, onUpdate }) {
+  const [adding, setAdding] = React.useState(false);
+  const [form, setForm] = React.useState({ title:'', target_amount:'', current_amount:'', deadline:'2026-12-31', category:'investment' });
+  const [editId, setEditId] = React.useState(null);
+  const [editVal, setEditVal] = React.useState('');
+
+  const handleAdd = async () => {
+    if(!form.title||!form.target_amount) return;
+    await onAdd(form);
+    setForm({title:'',target_amount:'',current_amount:'',deadline:'2026-12-31',category:'investment'});
+    setAdding(false);
+  };
+
+  const handleUpdateCurrent = async (id, val) => {
+    await onUpdate(id, { current_amount: parseFloat(val)||0 });
+    setEditId(null);
+  };
+
+  const catEmoji = { investment:'◆', savings:'◈', emergency:'◉', insurance:'◎', other:'○' };
+
+  return (
+    <div>
+      <div className="screen-header" style={{marginBottom:14}}>
+        <div><div className="screen-title">Targets</div><div className="screen-sub">Financial goals</div></div>
+        <button className="btn-ghost" onClick={()=>setAdding(a=>!a)}>{adding?'Cancel':'+ Add'}</button>
+      </div>
+
+      {adding && (
+        <div style={{padding:'0 20px 14px'}}>
+          <div className="card">
+            <div style={{marginBottom:12}}>
+              <div className="input-label">Goal Title</div>
+              <input className="input-field" placeholder="e.g. Investment Capital" value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}/>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
+              <div><div className="input-label">Target ₱</div><input className="input-field" type="number" placeholder="800000" value={form.target_amount} onChange={e=>setForm(f=>({...f,target_amount:e.target.value}))}/></div>
+              <div><div className="input-label">Current ₱</div><input className="input-field" type="number" placeholder="0" value={form.current_amount} onChange={e=>setForm(f=>({...f,current_amount:e.target.value}))}/></div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <div className="input-label">Deadline</div>
+              <input className="input-field" type="date" value={form.deadline} onChange={e=>setForm(f=>({...f,deadline:e.target.value}))} style={{fontFamily:'DM Sans'}}/>
+            </div>
+            <div style={{marginBottom:14}}>
+              <div className="input-label">Category</div>
+              <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))}>
+                {['investment','savings','emergency','insurance','other'].map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
+              </select>
+            </div>
+            <button className="btn-gold" onClick={handleAdd}>Add Goal</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{padding:'0 20px'}}>
+        {targets.length===0&&!adding&&(
+          <div style={{textAlign:'center',padding:'48px 0',color:'#5A7A9A',fontSize:13}}>No goals yet. Add your first target.</div>
+        )}
+        {targets.map(t=>{
+          const p = t.target_amount>0?Math.min(100,(t.current_amount/t.target_amount)*100):0;
+          const rem = Math.max(0,t.target_amount-t.current_amount);
+          const days = t.deadline?daysUntil(t.deadline):null;
+          return (
+            <div key={t.id} className="card" style={{marginBottom:12}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:10}}>
+                <div>
+                  <div style={{fontFamily:'Cormorant Garant,serif',fontSize:19,fontWeight:600,color:'#F5EDE0'}}>{t.title}</div>
+                  {days!==null&&<div style={{fontSize:11,color:days<60&&days>0?'#E05252':'#5A7A9A',marginTop:2}}>{days>0?`${days} days remaining`:days===0?'Due today':'Deadline passed'}</div>}
+                </div>
+                <div className="mono gold" style={{fontSize:14}}>{p.toFixed(0)}%</div>
+              </div>
+              <div className="progress-bg" style={{marginBottom:10}}><div className="progress-fill" style={{width:`${p}%`}}/></div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:12}}>
+                <span className="muted">Current: <span className="mono" style={{color:'#F5EDE0'}}>{php(t.current_amount)}</span></span>
+                <span className="muted">Still need: <span className="mono gold">{php(rem)}</span></span>
+              </div>
+              {editId===t.id ? (
+                <div style={{display:'flex',gap:8}}>
+                  <input className="input-field" type="number" value={editVal} onChange={e=>setEditVal(e.target.value)} style={{flex:1}} placeholder="New current amount"/>
+                  <button className="btn-gold" style={{width:'auto',padding:'10px 16px'}} onClick={()=>handleUpdateCurrent(t.id,editVal)}>Save</button>
+                  <button className="btn-ghost" onClick={()=>setEditId(null)}>✕</button>
+                </div>
+              ) : (
+                <button className="btn-ghost" style={{width:'100%',textAlign:'center'}} onClick={()=>{setEditId(t.id);setEditVal(t.current_amount);}}>Update current amount</button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   SCENARIOS SCREEN
+   ================================================================ */
+function Scenarios({ snapData }) {
+  const inc = snapData?.income||21000;
+  const exp = snapData?.expenses||15000;
+  const res = snapData?.liquid_reserves||80000;
+  const GOAL = 800000;
+
+  const [extraComm, setExtraComm] = React.useState(50000);
+  const [expCut, setExpCut] = React.useState(15);
+  const [savRate, setSavRate] = React.useState(20);
+  const [dryMonths, setDryMonths] = React.useState(3);
+
+  const scenA_surplus = extraComm;
+  const scenB_newExp = exp*(1-expCut/100);
+  const scenB_newSav = inc-scenB_newExp;
+  const scenC_mo = inc*(savRate/100);
+  const scenC_total = scenC_mo>0?Math.ceil((GOAL-res)/scenC_mo):9999;
+  const scenC_y = Math.floor(scenC_total/12);
+  const scenC_m = scenC_total%12;
+  const scenD_burn = res-(exp*dryMonths);
+  const scenD_critical = scenD_burn<=0;
+
+  return (
+    <div>
+      <div className="screen-header" style={{marginBottom:14}}>
+        <div><div className="screen-title">What If</div><div className="screen-sub">Scenario modeling</div></div>
+      </div>
+      <div style={{padding:'0 20px'}}>
+
+        <div className="card" style={{marginBottom:12,borderColor:'#2A5A3A'}}>
+          <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:'#3D9970',marginBottom:5}}>Scenario A — Commission Boost</div>
+          <div style={{fontSize:13,color:'#5A7A9A',marginBottom:12}}>Extra income lands this month</div>
+          <div className="input-label">Extra: <span className="mono gold">{php(extraComm)}</span></div>
+          <input type="range" min={0} max={300000} step={5000} value={extraComm} onChange={e=>setExtraComm(Number(e.target.value))} style={{margin:'10px 0 14px'}}/>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+            <div className="metric-card" style={{borderLeftColor:'#3D9970'}}>
+              <div className="metric-label">One-time surplus</div>
+              <div className="metric-value" style={{color:'#3D9970',fontSize:16}}>{php(scenA_surplus)}</div>
+            </div>
+            <div className="metric-card" style={{borderLeftColor:'#3D9970'}}>
+              <div className="metric-label">New monthly total</div>
+              <div className="metric-value" style={{color:'#3D9970',fontSize:16}}>{php(inc+extraComm)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{marginBottom:12,borderColor:'#2A3A5A'}}>
+          <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:'#7AB8E0',marginBottom:5}}>Scenario B — Expense Cut</div>
+          <div style={{fontSize:13,color:'#5A7A9A',marginBottom:12}}>Reduce monthly expenses</div>
+          <div className="input-label">Cut by: <span className="mono" style={{color:'#7AB8E0'}}>{expCut}%</span> → Save <span className="mono gold">{php(exp-scenB_newExp)}/mo</span></div>
+          <input type="range" min={5} max={40} step={1} value={expCut} onChange={e=>setExpCut(Number(e.target.value))} style={{margin:'10px 0 14px'}}/>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+            <div className="metric-card" style={{borderLeftColor:'#7AB8E0'}}>
+              <div className="metric-label">New expenses</div>
+              <div className="metric-value" style={{color:'#7AB8E0',fontSize:16}}>{php(scenB_newExp)}</div>
+            </div>
+            <div className="metric-card" style={{borderLeftColor:'#7AB8E0'}}>
+              <div className="metric-label">Monthly savings</div>
+              <div className="metric-value" style={{color:scenB_newSav>0?'#3D9970':'#E05252',fontSize:16}}>{php(scenB_newSav)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{marginBottom:12,borderColor:'#4A3A1A'}}>
+          <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:'#C9A96E',marginBottom:5}}>Scenario C — Goal Timeline</div>
+          <div style={{fontSize:13,color:'#5A7A9A',marginBottom:12}}>Time to ₱800,000 from {php(res)}</div>
+          <div className="input-label">Savings rate: <span className="mono gold">{savRate}%</span> → <span className="mono" style={{color:'#C9A96E'}}>{php(scenC_mo)}/mo</span></div>
+          <input type="range" min={5} max={60} step={1} value={savRate} onChange={e=>setSavRate(Number(e.target.value))} style={{margin:'10px 0 14px'}}/>
+          <div className="metric-card" style={{borderLeftColor:'#C9A96E',textAlign:'center'}}>
+            <div className="metric-label">Estimated time to goal</div>
+            <div className="metric-value" style={{color:'#C9A96E',fontSize:26}}>
+              {scenC_total>=9999?'—':`${scenC_y>0?`${scenC_y}y `:''}${scenC_m}m`}
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{borderColor: scenD_critical?'#5A2020':'#2A3A1A'}}>
+          <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:scenD_critical?'#E05252':'#A0C878',marginBottom:5}}>Scenario D — Dry Quarter</div>
+          <div style={{fontSize:13,color:'#5A7A9A',marginBottom:12}}>Zero commission income for N months</div>
+          <div className="input-label">Months without income: <span className="mono" style={{color:scenD_critical?'#E05252':'#C9A96E'}}>{dryMonths}</span></div>
+          <input type="range" min={1} max={12} step={1} value={dryMonths} onChange={e=>setDryMonths(Number(e.target.value))} style={{margin:'10px 0 14px'}}/>
+          <div className="metric-card" style={{borderLeftColor:scenD_critical?'#E05252':'#3D9970'}}>
+            <div className="metric-label">{scenD_critical?'Deficit after '+dryMonths+' months':'Reserves remaining'}</div>
+            <div className="metric-value" style={{color:scenD_critical?'#E05252':'#3D9970',fontSize:20}}>{scenD_critical?php(Math.abs(scenD_burn))+' deficit':php(scenD_burn)}</div>
+            <div className="metric-sub">{scenD_critical?`Run out in ${(res/exp).toFixed(1)} months`:`${(scenD_burn/exp).toFixed(1)} months still available`}</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   DECISIONS SCREEN
+   ================================================================ */
+function Decisions({ decisions, onAdd, onUpdateStatus }) {
+  const [adding, setAdding] = React.useState(false);
+  const [form, setForm] = React.useState({ title:'', reasoning:'', amount:'', category:'savings', review_date:'' });
+  const [saving, setSaving] = React.useState(false);
+
+  const handleAdd = async () => {
+    if(!form.title) return;
+    setSaving(true);
+    await onAdd({ ...form, decision_date:today(), review_date:form.review_date||d90(), status:'pending' });
+    setForm({title:'',reasoning:'',amount:'',category:'savings',review_date:''});
+    setAdding(false);
+    setSaving(false);
+  };
+
+  const needsReview = (d) => d.status==='pending'&&d.review_date&&new Date(d.review_date)<=new Date();
+  const catColor = { savings:'#3D9970', investment:'#C9A96E', expense:'#E05252', debt:'#E05252', income:'#7AB8E0', insurance:'#A569BD', other:'#5A7A9A' };
+
+  return (
+    <div>
+      <div className="screen-header" style={{marginBottom:14}}>
+        <div><div className="screen-title">Decisions</div><div className="screen-sub">Log & 90-day review</div></div>
+        <button className="btn-ghost" onClick={()=>setAdding(a=>!a)}>{adding?'Cancel':'+ Log'}</button>
+      </div>
+
+      {adding && (
+        <div style={{padding:'0 20px 14px'}}>
+          <div className="card">
+            <div style={{marginBottom:12}}>
+              <div className="input-label">Decision</div>
+              <input className="input-field" placeholder="What did you decide?" value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}/>
+            </div>
+            <div style={{marginBottom:12}}>
+              <div className="input-label">Reasoning</div>
+              <textarea placeholder="Why this decision? What outcome are you expecting?" value={form.reasoning} onChange={e=>setForm(f=>({...f,reasoning:e.target.value}))}/>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
+              <div><div className="input-label">Amount ₱</div><input className="input-field" type="number" placeholder="0" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))}/></div>
+              <div><div className="input-label">Category</div>
+                <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))}>
+                  {['savings','investment','expense','debt','income','insurance','other'].map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{marginBottom:14}}>
+              <div className="input-label">Review Date (default: 90 days)</div>
+              <input className="input-field" type="date" value={form.review_date||d90()} onChange={e=>setForm(f=>({...f,review_date:e.target.value}))} style={{fontFamily:'DM Sans'}}/>
+            </div>
+            <button className="btn-gold" onClick={handleAdd} disabled={saving}>{saving?'Saving...':'Log Decision'}</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{padding:'0 20px'}}>
+        {decisions.length===0&&!adding&&<div style={{textAlign:'center',padding:'48px 0',color:'#5A7A9A',fontSize:13}}>No decisions logged yet.</div>}
+        {decisions.map(d=>(
+          <div key={d.id} className="card" style={{marginBottom:12,borderLeftColor:needsReview(d)?'#E05252':catColor[d.category]||'#5A7A9A',borderLeftWidth:3}}>
+            {needsReview(d)&&<div style={{fontSize:9,letterSpacing:1.5,color:'#E05252',marginBottom:6,textTransform:'uppercase'}}>Review due</div>}
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
+              <div style={{fontWeight:500,fontSize:14,color:'#F5EDE0',flex:1,paddingRight:8,lineHeight:1.4}}>{d.title}</div>
+              {d.amount>0&&<div className="mono gold" style={{fontSize:13,flexShrink:0}}>{php(d.amount)}</div>}
+            </div>
+            {d.reasoning&&<div style={{fontSize:13,color:'#7A9AB5',marginBottom:10,lineHeight:1.55}}>{d.reasoning}</div>}
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#3A5A7A',marginBottom:needsReview(d)?10:0}}>
+              <span>Logged: {d.decision_date}</span>
+              <span>Review: {d.review_date}</span>
+            </div>
+            {needsReview(d)&&(
+              <div style={{display:'flex',gap:8,marginTop:8}}>
+                <button className="btn-ghost" style={{flex:1,fontSize:12}} onClick={()=>onUpdateStatus(d.id,'correct')}>✓ Was right</button>
+                <button className="btn-ghost" style={{flex:1,fontSize:12,borderColor:'#E0525233',color:'#E05252'}} onClick={()=>onUpdateStatus(d.id,'incorrect')}>✗ Was wrong</button>
+              </div>
+            )}
+            {(d.status==='correct'||d.status==='incorrect')&&(
+              <div style={{marginTop:8,fontSize:12,color:d.status==='correct'?'#3D9970':'#E05252'}}>
+                {d.status==='correct'?'✓ Decision was correct':'✗ Decision was incorrect'}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   PROTECTION SCREEN
+   ================================================================ */
+function Protection({ snapData }) {
+  const exp = snapData?.expenses||0;
+  const res = snapData?.liquid_reserves||80000;
+  const TARGET_MONTHS = 6;
+  const efTarget = exp*TARGET_MONTHS;
+  const efPct = efTarget>0?Math.min(100,(res/efTarget)*100):0;
+  const efGap = Math.max(0,efTarget-res);
+  const efColor = efPct>=100?'#3D9970':efPct>=50?'#C9A96E':'#E05252';
+
+  const [ins, setIns] = React.useState({ termLife:false, healthCard:false, vul:false, propertyIns:false });
+  const [changePIN, setChangePIN] = React.useState(false);
+  const [p1,setP1]=React.useState(''); const [p2,setP2]=React.useState(''); const [pinMsg,setPinMsg]=React.useState('');
+
+  const items = [
+    { key:'termLife', label:'Term Life Insurance', desc:'Coverage: 10–15× annual income. Avoid VUL for pure protection.', essential:true },
+    { key:'healthCard', label:'Health Card / HMO', desc:'Personal or employer plan active.', essential:true },
+    { key:'vul', label:'VUL / Investment-Linked', desc:'If held, review if it overlaps with your investment strategy.', essential:false },
+    { key:'propertyIns', label:'Fire / Property Insurance', desc:'Required if you own real property.', essential:false },
+  ];
+
+  const handlePINChange = async () => {
+    if(p1.length<6||p2.length<6){setPinMsg('PIN must be 6 digits.');return;}
+    if(p1!==p2){setPinMsg('PINs do not match.');return;}
+    const hash = await hashPIN(p1);
+    const { error } = await sb.from('config').update({ pin_hash:hash }).eq('id','ron');
+    if(error){setPinMsg('Error saving. Try again.');} else {setPinMsg('PIN updated.'); setP1(''); setP2(''); setTimeout(()=>{setChangePIN(false);setPinMsg('');},1500);}
+  };
+
+  return (
+    <div>
+      <div className="screen-header" style={{marginBottom:14}}>
+        <div><div className="screen-title">Protection</div><div className="screen-sub">Emergency fund & coverage</div></div>
+      </div>
+      <div style={{padding:'0 20px'}}>
+
+        <div className="card" style={{marginBottom:12,borderColor:efColor+'44'}}>
+          <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:'#5A7A9A',marginBottom:10}}>Emergency Fund</div>
+          {exp===0?(
+            <div style={{fontSize:13,color:'#5A7A9A'}}>Enter monthly expenses in Snapshot to calculate your emergency fund target.</div>
+          ):(
+            <>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:10}}>
+                <div><div className="mono" style={{fontSize:22,color:efColor}}>{php(res)}</div><div style={{fontSize:11,color:'#5A7A9A',marginTop:2}}>of {php(efTarget)} target</div></div>
+                <div style={{textAlign:'right'}}><div className="mono" style={{fontSize:18,color:efColor}}>{efPct.toFixed(0)}%</div><div style={{fontSize:11,color:'#5A7A9A',marginTop:2}}>{TARGET_MONTHS} months</div></div>
+              </div>
+              <div className="progress-bg" style={{marginBottom:8}}><div className="progress-fill" style={{width:`${efPct}%`,background:efColor}}/></div>
+              {efGap>0?<div style={{fontSize:12,color:'#5A7A9A'}}>Need <span className="mono gold">{php(efGap)}</span> more for full 6-month safety net</div>:<div style={{fontSize:12,color:'#3D9970'}}>✓ Emergency fund fully funded</div>}
+            </>
+          )}
+        </div>
+
+        <div className="card" style={{marginBottom:12}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:12}}>
+            <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:'#5A7A9A'}}>Insurance Checklist</div>
+            <div style={{fontSize:12,color:'#5A7A9A'}}><span className="mono gold">{Object.values(ins).filter(Boolean).length}</span>/{items.length}</div>
+          </div>
+          {items.map(item=>(
+            <div key={item.key} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'11px 0',borderBottom:'1px solid #1A2E4A',cursor:'pointer'}} onClick={()=>setIns(s=>({...s,[item.key]:!s[item.key]}))}>
+              <div style={{width:22,height:22,borderRadius:4,border:`2px solid ${ins[item.key]?'#3D9970':'#2A4A6A'}`,background:ins[item.key]?'#3D9970':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all 0.15s',marginTop:1}}>
+                {ins[item.key]&&<span style={{color:'#050C18',fontSize:13,fontWeight:700}}>✓</span>}
+              </div>
+              <div>
+                <div style={{fontSize:14,color:'#F5EDE0',display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                  {item.label}
+                  {item.essential&&<span style={{fontSize:9,background:'#1A3A2A',color:'#3D9970',padding:'2px 6px',borderRadius:4}}>Essential</span>}
+                </div>
+                <div style={{fontSize:11,color:'#5A7A9A',marginTop:2,lineHeight:1.5}}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
+          <div style={{padding:'10px 0 0',fontSize:11,color:'#3A5A7A',lineHeight:1.6}}>Tap to mark what you currently have. This resets on refresh — use as a prompt, not a record.</div>
+        </div>
+
+        <div className="card">
+          <div style={{fontSize:9,letterSpacing:2,textTransform:'uppercase',color:'#5A7A9A',marginBottom:10}}>Account Settings</div>
+          {!changePIN ? (
+            <button className="btn-ghost" style={{width:'100%',textAlign:'center'}} onClick={()=>setChangePIN(true)}>Change PIN</button>
+          ) : (
+            <div>
+              <div style={{marginBottom:10}}>
+                <div className="input-label">New PIN (6 digits)</div>
+                <input className="input-field" type="password" maxLength={6} value={p1} onChange={e=>setP1(e.target.value.replace(/\D/,'').slice(0,6))} placeholder="••••••"/>
+              </div>
+              <div style={{marginBottom:10}}>
+                <div className="input-label">Confirm New PIN</div>
+                <input className="input-field" type="password" maxLength={6} value={p2} onChange={e=>setP2(e.target.value.replace(/\D/,'').slice(0,6))} placeholder="••••••"/>
+              </div>
+              {pinMsg&&<div style={{fontSize:12,color:pinMsg.includes('updated')?'#3D9970':'#E05252',marginBottom:10}}>{pinMsg}</div>}
+              <div style={{display:'flex',gap:8}}>
+                <button className="btn-gold" style={{flex:1}} onClick={handlePINChange}>Update PIN</button>
+                <button className="btn-ghost" onClick={()=>{setChangePIN(false);setP1('');setP2('');setPinMsg('');}}>Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   NAVIGATION
+   ================================================================ */
+const NAV = [
+  { id:'snapshot', label:'Snapshot', icon: active => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active?2:1.5}><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg> },
+  { id:'targets', label:'Targets', icon: active => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active?2:1.5}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg> },
+  { id:'scenarios', label:'What If', icon: active => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active?2:1.5}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> },
+  { id:'decisions', label:'Log', icon: active => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active?2:1.5}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg> },
+  { id:'protection', label:'Protect', icon: active => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active?2:1.5}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+];
+
+/* ================================================================
+   ROOT APP
+   ================================================================ */
+function App() {
+  const [screen, setScreen] = React.useState('loading');
+  const [tab, setTab] = React.useState('snapshot');
+  const [snapData, setSnapData] = React.useState(null);
+  const [targets, setTargets] = React.useState([]);
+  const [decisions, setDecisions] = React.useState([]);
+
+  React.useEffect(()=>{ checkSetup(); },[]);
+
+  async function checkSetup() {
+    try {
+      const { data } = await sb.from('config').select('id').eq('id','ron').maybeSingle();
+      setScreen(data?'pin':'setup');
+    } catch { setScreen('setup'); }
+  }
+
+  async function handlePIN(pin, mode) {
+    if(mode==='setup') {
+      const hash = await hashPIN(pin);
+      await sb.from('config').upsert({ id:'ron', pin_hash:hash });
+      await loadData(); setScreen('app'); return true;
+    } else {
+      const { data } = await sb.from('config').select('pin_hash').eq('id','ron').single();
+      const hash = await hashPIN(pin);
+      if(hash===data?.pin_hash) { await loadData(); setScreen('app'); return true; }
+      return false;
+    }
+  }
+
+  async function loadData() {
+    const mo = currMonth();
+    let { data: snap } = await sb.from('snapshots').select('*').eq('month',mo).maybeSingle();
+    if(!snap) {
+      const { data: ns } = await sb.from('snapshots').insert({ month:mo, income:21000, expenses:0, liquid_reserves:80000, total_assets:80000, total_liabilities:0 }).select().single();
+      snap = ns;
+    }
+    setSnapData(snap);
+
+    let { data: tgts } = await sb.from('targets').select('*').order('created_at',{ascending:true});
+    if(!tgts||tgts.length===0) {
+      const { data: dt } = await sb.from('targets').insert({ title:'Investment Capital', target_amount:800000, current_amount:80000, deadline:'2026-12-31', category:'investment' }).select().single();
+      tgts = [dt];
+    }
+    setTargets(tgts||[]);
+
+    const { data: decs } = await sb.from('decisions').select('*').order('created_at',{ascending:false}).limit(30);
+    setDecisions(decs||[]);
+  }
+
+  async function updateSnapshot(form) {
+    const { data } = await sb.from('snapshots').upsert({ ...form, month:currMonth(), updated_at:new Date().toISOString() }).select().single();
+    setSnapData(data);
+  }
+
+  async function addTarget(form) {
+    const { data } = await sb.from('targets').insert({ title:form.title, target_amount:parseFloat(form.target_amount)||0, current_amount:parseFloat(form.current_amount)||0, deadline:form.deadline, category:form.category }).select().single();
+    if(data) setTargets(t=>[...t,data]);
+  }
+
+  async function updateTarget(id, updates) {
+    await sb.from('targets').update(updates).eq('id',id);
+    setTargets(t=>t.map(x=>x.id===id?{...x,...updates}:x));
+  }
+
+  async function addDecision(form) {
+    const { data } = await sb.from('decisions').insert({ decision_date:form.decision_date, title:form.title, reasoning:form.reasoning, amount:parseFloat(form.amount)||0, category:form.category, review_date:form.review_date, status:'pending' }).select().single();
+    if(data) setDecisions(d=>[data,...d]);
+  }
+
+  async function updateDecisionStatus(id, status) {
+    await sb.from('decisions').update({ status }).eq('id',id);
+    setDecisions(d=>d.map(x=>x.id===id?{...x,status}:x));
+  }
+
+  if(screen==='loading') return (
+    <div className="loading-screen">
+      <div style={{fontFamily:'Cormorant Garant,serif',fontSize:26,color:'#C9A96E'}}>CFO Dashboard</div>
+      <div style={{fontSize:12,color:'#5A7A9A'}}>Connecting...</div>
+    </div>
+  );
+
+  if(screen==='setup'||screen==='pin') return <PINGate onUnlock={handlePIN} isSetup={screen==='setup'}/>;
+
+  return (
+    <>
+      <div className="screen">
+        {tab==='snapshot'&&<Snapshot data={snapData} onUpdate={updateSnapshot}/>}
+        {tab==='targets'&&<Targets targets={targets} onAdd={addTarget} onUpdate={updateTarget}/>}
+        {tab==='scenarios'&&<Scenarios snapData={snapData}/>}
+        {tab==='decisions'&&<Decisions decisions={decisions} onAdd={addDecision} onUpdateStatus={updateDecisionStatus}/>}
+        {tab==='protection'&&<Protection snapData={snapData}/>}
+      </div>
+      <div className="bottom-nav">
+        {NAV.map(n=>(
+          <button key={n.id} className={`nav-item ${tab===n.id?'active':''}`} onClick={()=>setTab(n.id)}>
+            {n.icon(tab===n.id)}
+            <span className="nav-label">{n.label}</span>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
